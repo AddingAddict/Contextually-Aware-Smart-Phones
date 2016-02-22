@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">Spring 2016 UROP</string>
+
+    <string name="hello_world">Hello world!</string>
+    <string name="action_settings">Settings</string>
+    <string name="edit_message">Enter a Message</string>
+    <string name="button_send">Refresh WiFi Info</string>
+    <string name="explanation">Visible SSIDs and respective RSSIs:\n</string>
+</resources>
