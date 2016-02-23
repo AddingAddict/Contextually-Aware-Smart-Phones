@@ -1,39 +1,70 @@
 package com.example.tuannguyen.spring2016urop;
 
-import android.database.DataSetObserver;
-import android.support.v4.app.Fragment;
+import android.app.Activity;
 import android.content.Context;
 import android.net.wifi.WifiManager;
 import android.net.wifi.ScanResult;
-import android.support.v4.app.ListFragment;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.text.method.ScrollingMovementMethod;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.ListAdapter;
+import android.widget.TextView;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 
-public class WifiInfoBarf extends AppCompatActivity implements ListAdapter{
+public class WifiInfoBarf extends AppCompatActivity{
 
     int MY_PERMISSIONS_REQUEST_CHANGE_WIFI_STATE = 1;
+
+    WifiManager wifiManager;
+    List<ScanResult> scanResults;
+
+    Timer t;
+    TimerTask timer;
+
+    Activity wifiInfoBarf;
+    TextView expo;
+    TextView scanList;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_wifi_info_barf);
-        if (findViewById(R.id.fragment_containter) != null) {
-            if (savedInstanceState != null) {
-                return;
-            }
-            Fragment scanList = new ScanList();
 
-            getSupportFragmentManager().beginTransaction()
-                    .add(R.id.fragment_containter, scanList, "scan_list").commit();
-        }
+        wifiInfoBarf = this;
+
+        expo = (TextView) this.findViewById(R.id.expo);
+
+        scanList = (TextView) this.findViewById(R.id.scan_list);
+        scanList.setMovementMethod(new ScrollingMovementMethod());
+
+        wifiManager = (WifiManager) this.getSystemService(Context.WIFI_SERVICE);
+
+        timer = new TimerTask() {
+            @Override
+            public void run() {
+                wifiInfoBarf.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        wifiManager.startScan();
+                        scanResults = wifiManager.getScanResults();
+
+                        String text = "";
+                        for (ScanResult scan : scanResults) {
+                            text += "[" + scan.level + " dBm] (" + scan.BSSID + ") " +
+                                    scan.SSID + "\n";
+                        }
+                        scanList.setText(text);
+                    }
+                });
+            }
+        };
+
+        t = new Timer();
+        t.scheduleAtFixedRate(timer, 0, 60000);
     }
 
     @Override
@@ -57,92 +88,4 @@ public class WifiInfoBarf extends AppCompatActivity implements ListAdapter{
 
         return super.onOptionsItemSelected(item);
     }
-
-    public void onPause() {
-        super.onPause();
-        WifiManager wifiManager = (WifiManager) this.getSystemService(Context.WIFI_SERVICE);
-
-        wifiManager.setWifiEnabled(true);
-        wifiManager.startScan();
-        List<ScanResult> scanResults = wifiManager.getScanResults();
-
-        ListFragment scanList = (ListFragment) getSupportFragmentManager()
-                .findFragmentByTag("scan_list");
-
-        for(ScanResult scan: scanResults) {
-
-        }
-
-
-    }
-
-    @Override
-    public boolean areAllItemsEnabled() {
-        return false;
-    }
-
-    @Override
-    public boolean isEnabled(int position) {
-        return false;
-    }
-
-    @Override
-    public void registerDataSetObserver(DataSetObserver observer) {
-
-    }
-
-    @Override
-    public void unregisterDataSetObserver(DataSetObserver observer) {
-
-    }
-
-    @Override
-    public int getCount() {
-        return 0;
-    }
-
-    @Override
-    public Object getItem(int position) {
-        return null;
-    }
-
-    @Override
-    public long getItemId(int position) {
-        return 0;
-    }
-
-    @Override
-    public boolean hasStableIds() {
-        return false;
-    }
-
-    @Override
-    public View getView(int position, View convertView, ViewGroup parent) {
-        return null;
-    }
-
-    @Override
-    public int getItemViewType(int position) {
-        return 0;
-    }
-
-    @Override
-    public int getViewTypeCount() {
-        return 0;
-    }
-
-    @Override
-    public boolean isEmpty() {
-        return false;
-    }
-
-    /*
-    public void wifiScan(View view) {
-        WifiManager wifiManager = (WifiManager) this.getSystemService(Context.WIFI_SERVICE);
-
-        wifiManager.setWifiEnabled(true);
-        wifiManager.startScan();
-        List<ScanResult> scanResult = wifiManager.getScanResults();
-    }
-    */
 }
