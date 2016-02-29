@@ -6,4 +6,5 @@
     <string name="edit_message">Enter a Message</string>
     <string name="button_send">Refresh WiFi Info</string>
     <string name="explanation"><b><u>List of Wireless Networks:</u></b></string>
+    <string name="null_scan">Uh Oh! Scans are coming up empty :(</string>
 </resources>

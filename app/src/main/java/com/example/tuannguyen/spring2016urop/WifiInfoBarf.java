@@ -1,9 +1,13 @@
 package com.example.tuannguyen.spring2016urop;
 
+import android.Manifest;
 import android.app.Activity;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.net.wifi.WifiManager;
 import android.net.wifi.ScanResult;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.method.ScrollingMovementMethod;
@@ -17,7 +21,7 @@ import java.util.TimerTask;
 
 public class WifiInfoBarf extends AppCompatActivity{
 
-    int MY_PERMISSIONS_REQUEST_CHANGE_WIFI_STATE = 1;
+    //int MY_PERMISSIONS_REQUEST_ACCESS_COARSE_LOCATION = 1;
 
     WifiManager wifiManager;
     List<ScanResult> scanResults;
@@ -32,6 +36,23 @@ public class WifiInfoBarf extends AppCompatActivity{
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        /*
+        // Asks for permission if not already given
+        if(ContextCompat.checkSelfPermission(this,
+                Manifest.permission.ACCESS_COARSE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED){
+
+            if(ActivityCompat.shouldShowRequestPermissionRationale(this,
+                    Manifest.permission.ACCESS_COARSE_LOCATION)) {
+            }else{
+                ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.READ_CONTACTS},
+                        MY_PERMISSIONS_REQUEST_ACCESS_COARSE_LOCATION);
+            }
+        }
+        */
+
         setContentView(R.layout.activity_wifi_info_barf);
 
         wifiInfoBarf = this;
@@ -52,12 +73,16 @@ public class WifiInfoBarf extends AppCompatActivity{
                         wifiManager.startScan();
                         scanResults = wifiManager.getScanResults();
 
-                        String text = "";
-                        for (ScanResult scan : scanResults) {
-                            text += "[" + scan.level + " dBm] (" + scan.BSSID + ") " +
-                                    scan.SSID + "\n";
+                        if(scanResults == null){
+                            scanList.setText(R.string.null_scan);
+                        }else{
+                            String text = "";
+                            for(ScanResult scan : scanResults) {
+                                text += "[" + scan.level + " dBm] (" + scan.BSSID + ") " +
+                                        scan.SSID + "\n";
+                            }
+                            scanList.setText(text);
                         }
-                        scanList.setText(text);
                     }
                 });
             }
