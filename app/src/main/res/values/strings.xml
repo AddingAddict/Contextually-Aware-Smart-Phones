@@ -3,8 +3,19 @@
 
     <string name="hello_world">Hello world!</string>
     <string name="action_settings">Settings</string>
-    <string name="edit_message">Enter a Message</string>
-    <string name="button_send">Refresh WiFi Info</string>
+
     <string name="explanation"><b><u>List of Wireless Networks:</u></b></string>
-    <string name="null_scan">Uh Oh! Scans are coming up empty :(</string>
+    <string name="null_scan">Uh Oh! Scans are coming up empty :( If you are running Marshmallow,
+        then you\'ll need to enable location permissions</string>
+
+    <string name="yes_silent"><b>Within Silent Zone? </b> Yes</string>
+    <string name="no_silent"><b>WIthin Silent Zone? </b> No</string>
+
+    <string name="silence_vibrate">Set phone to vibrate or silent?</string>
+    <string name="silence">\u0020 silence \u0020</string>
+    <string name="vibrate">\u0020 vibrate \u0020</string>
+
+    <string name="auto_manual">Change settings automatically or via notification?</string>
+    <string name="auto">\u0020 auto \u0020</string>
+    <string name="manual">\u0020 manual \u0020</string>
 </resources>
