@@ -8,14 +8,24 @@
     <string name="null_scan">Uh Oh! Scans are coming up empty :( If you are running Marshmallow,
         then you\'ll need to enable location permissions</string>
 
-    <string name="yes_silent"><b>Within Silent Zone? </b> Yes</string>
-    <string name="no_silent"><b>WIthin Silent Zone? </b> No</string>
-
-    <string name="silence_vibrate">Set phone to vibrate or silent?</string>
-    <string name="silence">\u0020 silence \u0020</string>
-    <string name="vibrate">\u0020 vibrate \u0020</string>
-
     <string name="auto_manual">Change settings automatically or via notification?</string>
     <string name="auto">\u0020 auto \u0020</string>
     <string name="manual">\u0020 manual \u0020</string>
+
+    <string name="silence_vibrate"><b>(Auto Mode Only)</b> Set phone to vibrate or silent?</string>
+    <string name="silence">\u0020 silence \u0020</string>
+    <string name="vibrate">\u0020 vibrate \u0020</string>
+
+    <string name="number_buzzes_expo"><b>(Manual Mode Only)</b> Number of buzzes?</string>
+    <string name="number_buzzes_hint">1</string>
+    <string name="length_buzzes_expo"><b>(Manual Mode Only)</b> Length of each buzz?
+        (in ms)</string>
+    <string name="length_buzzes_hint">100</string>
+    <string name="length_silence_expo"><b>(Manual Mode Only)</b> Time between buzzes?
+        (in ms)</string>
+    <string name="length_silence_hint">100</string>
+
+    <string name="yes_silent"><b>Within Silent Zone? </b> Yes</string>
+    <string name="no_silent"><b>WIthin Silent Zone? </b> No</string>
+
 </resources>

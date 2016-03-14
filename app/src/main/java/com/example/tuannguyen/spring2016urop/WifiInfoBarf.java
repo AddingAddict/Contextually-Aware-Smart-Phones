@@ -16,10 +16,10 @@ import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.method.ScrollingMovementMethod;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.CompoundButton;
+import android.widget.EditText;
 import android.widget.Switch;
 import android.widget.TextView;
 
@@ -31,7 +31,7 @@ public class WifiInfoBarf extends AppCompatActivity{
 
     private static final int MY_PERMISSIONS_REQUEST_ACCESS_COARSE_LOCATION = 1;
     private static final String SILENCE_SSID = "MIT SECURE";
-    private static final int threshold = -85;
+    private static final int threshold = -65;
 
     public static final int SILENT = 0;
     public static final int VIBRATE = 1;
@@ -47,7 +47,6 @@ public class WifiInfoBarf extends AppCompatActivity{
     AudioManager audioManager;
 
     NotificationCompat.Builder nBuilderSilent;
-    NotificationCompat.Builder nBuilderVibrate;
     NotificationCompat.Builder nBuilderNormal;
     NotificationManager nManager;
 
@@ -58,11 +57,18 @@ public class WifiInfoBarf extends AppCompatActivity{
     TextView expo;
     TextView silent;
     TextView scanList;
-    Switch silenceVibrate;
     Switch autoManual;
+    Switch silenceVibrate;
+    TextView numBuzzText;
+    EditText numBuzzBox;
+    TextView lenBuzzText;
+    EditText lenBuzzBox;
+    TextView lenSilentText;
+    EditText lenSilentBox;
 
     int ringerMode;
     int actionMode;
+    boolean inSilentZone;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -94,27 +100,14 @@ public class WifiInfoBarf extends AppCompatActivity{
         scanList = (TextView) this.findViewById(R.id.scan_list);
         scanList.setMovementMethod(new ScrollingMovementMethod());
 
+        numBuzzText = (TextView) this.findViewById(R.id.number_buzzes_text);
+        lenBuzzText = (TextView) this.findViewById(R.id.length_buzzes_text);
+        lenSilentText = (TextView) this.findViewById(R.id.length_silence_text);
+
         // Default modes for settings
         ringerMode = SILENT;
         actionMode = MANUAL;
-
-        // Specifies behavior for silence/vibrate switch
-        silenceVibrate = (Switch) this.findViewById(R.id.silence_vibrate);
-        silenceVibrate.setChecked(true);
-        silenceVibrate.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView,
-                                         boolean isChecked) {
-
-                if (isChecked) {
-                    ringerMode = SILENT;
-                } else {
-                    ringerMode = VIBRATE;
-                }
-
-            }
-        });
+        inSilentZone = false;
 
         // Specifies behavior for auto/manual switch
         autoManual = (Switch) this.findViewById(R.id.auto_manual);
@@ -134,6 +127,32 @@ public class WifiInfoBarf extends AppCompatActivity{
             }
         });
 
+        // Specifies behavior for silence/vibrate switch
+        silenceVibrate = (Switch) this.findViewById(R.id.silence_vibrate);
+        silenceVibrate.setChecked(true);
+        silenceVibrate.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView,
+                                         boolean isChecked) {
+
+                if (isChecked) {
+                    ringerMode = SILENT;
+                } else {
+                    ringerMode = VIBRATE;
+                }
+
+            }
+        });
+
+        // Stores textbox objects so we can use them as input
+        numBuzzBox = (EditText) this.findViewById(R.id.number_buzzes_box);
+        numBuzzBox.setText("1");
+        lenBuzzBox = (EditText) this.findViewById(R.id.length_buzzes_box);
+        lenBuzzBox.setText("100");
+        lenSilentBox = (EditText) this.findViewById(R.id.length_silence_box);
+        lenSilentBox.setText("100");
+
         // Creates the managers for WiFi and Audio settings
         wifiManager = (WifiManager) this.getSystemService(Context.WIFI_SERVICE);
         audioManager = (AudioManager) this.getSystemService(Context.AUDIO_SERVICE);
@@ -148,25 +167,33 @@ public class WifiInfoBarf extends AppCompatActivity{
         Intent setNormal = new Intent(this, NormalService.class);
         PendingIntent pSetNormal = PendingIntent.getService(this, 0, setNormal, 0);
 
+        Intent doNothing = new Intent();
+        PendingIntent pDoNothing = PendingIntent.getService(this, 0, doNothing, 0);
+
         // Creates necessary objects for creating notifications, associating pending intents
         nBuilderSilent = new NotificationCompat.Builder(this)
                 .setSmallIcon(R.drawable.ic_stat_trollface)
-                .setContentTitle("Entering A Silent Zone")
-                .setContentText("Set your phone to silent?")
-                .setContentIntent(pSetSilent);
-
-        nBuilderVibrate = new NotificationCompat.Builder(this)
-                .setSmallIcon(R.drawable.ic_stat_trollface)
-                .setContentTitle("Entering A Silent Zone")
-                .setContentText("Set your phone to vibrate?")
-                .setContentIntent(pSetVibrate);
+                .setContentTitle("Please Silence Me!")
+                .setContentText("You are entering a silent area.")
+                .setAutoCancel(true)
+                .addAction(new NotificationCompat.Action.Builder(R.drawable.ic_done_black_24dp,
+                        "done", pDoNothing).build())
+                .addAction(new NotificationCompat.Action.Builder(R.drawable.ic_vibration_black_24dp,
+                        "vibrate", pSetVibrate).build())
+                .addAction(new NotificationCompat.Action.Builder(R.drawable.ic_volume_off_black_24dp,
+                        "silent", pSetSilent).build());
 
         nBuilderNormal = new NotificationCompat.Builder(this)
                 .setSmallIcon(R.drawable.ic_stat_trollface)
-                .setContentTitle("You've Exited the Silent Zone")
-                .setContentText("Set your phone back to normal?")
-                .setContentIntent(pSetNormal);
+                .setContentTitle("Turn on my Volume Again?")
+                .setContentText("You have exited the area.")
+                .setAutoCancel(true)
+                .addAction(new NotificationCompat.Action.Builder(R.drawable.ic_done_black_24dp,
+                        "done", pDoNothing).build())
+                .addAction(new NotificationCompat.Action.Builder(R.drawable.ic_volume_up_black_24dp,
+                        "sound", pSetNormal).build());
 
+        // Creates a notification manager to issue the notifications
         nManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
 
         // Creates a timer that scans WiFi and changes settings every N minutes
@@ -209,42 +236,62 @@ public class WifiInfoBarf extends AppCompatActivity{
                                                 audioManager.setRingerMode(
                                                         AudioManager.RINGER_MODE_SILENT);
                                                 break;
+
                                             case VIBRATE:
                                                 audioManager.setRingerMode(
                                                         AudioManager.RINGER_MODE_VIBRATE);
                                                 break;
+
                                             default:
-                                                //throw new IllegalStateException();
-                                                break;
+                                                throw new IllegalStateException();
                                         }
                                         break;
 
                                     // If the app needs to send a notification out instead
                                     case MANUAL:
-                                        switch (ringerMode) {
-                                            case SILENT:
-                                                if (audioManager.getRingerMode()
-                                                        != AudioManager.RINGER_MODE_SILENT) {
-                                                    nManager.notify(NOTIFICATION_ID,
-                                                            nBuilderSilent.build());
-                                                }
-                                                break;
-                                            case VIBRATE:
-                                                if (audioManager.getRingerMode()
-                                                        != AudioManager.RINGER_MODE_VIBRATE) {
-                                                    nManager.notify(NOTIFICATION_ID,
-                                                            nBuilderVibrate.build());
-                                                }
-                                                break;
-                                            default:
-                                                //throw new IllegalStateException();
-                                                break;
+                                        if(!inSilentZone) {
+                                            inSilentZone = true;
+
+                                            int numBuzz;
+                                            if(numBuzzBox.getText().toString().equals("")){
+                                                numBuzz = 1;
+                                            } else {
+                                                numBuzz = Integer.parseInt(
+                                                        numBuzzBox.getText().toString());
+                                            }
+
+                                            int lenBuzz;
+                                            if(numBuzzBox.getText().toString().equals("")){
+                                                lenBuzz = 100;
+                                            } else {
+                                                lenBuzz = Integer.parseInt(
+                                                        lenBuzzBox.getText().toString());
+                                            }
+
+                                            int lenSilent;
+                                            if(numBuzzBox.getText().toString().equals("")){
+                                                lenSilent = 100;
+                                            } else {
+                                                lenSilent = Integer.parseInt(
+                                                        lenSilentBox.getText().toString());
+                                            }
+
+                                            long[] buzzPattern = new long[2*numBuzz + 1];
+
+                                            buzzPattern[0] = lenSilent;
+                                            for(int i = 0; i < numBuzz; i++){
+                                                buzzPattern[2*i + 1] = lenBuzz;
+                                                buzzPattern[2*i + 2] = lenSilent;
+                                            }
+
+                                            nBuilderSilent.setVibrate(buzzPattern);
+                                            nManager.notify(NOTIFICATION_ID,
+                                                    nBuilderSilent.build());
                                         }
                                         break;
 
                                     default:
-                                        //throw new IllegalStateException();
-                                        break;
+                                        throw new IllegalStateException();
                                 }
                             }else{
                                 silent.setText(R.string.no_silent);
@@ -252,13 +299,53 @@ public class WifiInfoBarf extends AppCompatActivity{
                                     case AUTO:
                                         audioManager.setRingerMode(AudioManager.RINGER_MODE_NORMAL);
                                         break;
+
                                     case MANUAL:
-                                        if(audioManager.getRingerMode()
-                                                != AudioManager.RINGER_MODE_NORMAL){
-                                            nManager.notify(NOTIFICATION_ID,
-                                                    nBuilderNormal.build());
+                                        if(inSilentZone) {
+                                            inSilentZone = false;
+
+
+                                            int numBuzz;
+                                            if(numBuzzBox.getText().toString().equals("")){
+                                                numBuzz = 1;
+                                            } else {
+                                                numBuzz = Integer.parseInt(
+                                                        numBuzzBox.getText().toString());
+                                            }
+
+                                            int lenBuzz;
+                                            if(numBuzzBox.getText().toString().equals("")){
+                                                lenBuzz = 100;
+                                            } else {
+                                                lenBuzz = Integer.parseInt(
+                                                        lenBuzzBox.getText().toString());
+                                            }
+
+                                            int lenSilent;
+                                            if(numBuzzBox.getText().toString().equals("")){
+                                                lenSilent = 100;
+                                            } else {
+                                                lenSilent = Integer.parseInt(
+                                                        lenSilentBox.getText().toString());
+                                            }
+
+                                            long[] buzzPattern = new long[2*numBuzz + 1];
+
+                                            buzzPattern[0] = lenSilent;
+                                            for(int i = 0; i < numBuzz; i++){
+                                                buzzPattern[2*i + 1] = lenBuzz;
+                                                buzzPattern[2*i + 2] = lenSilent;
+                                            }
+
+                                            nBuilderNormal.setVibrate(buzzPattern);
+                                            if(audioManager.getRingerMode()
+                                                    != AudioManager.RINGER_MODE_NORMAL) {
+                                                nManager.notify(NOTIFICATION_ID,
+                                                        nBuilderNormal.build());
+                                            }
                                         }
                                         break;
+
                                     default:
                                         break;
                                 }
@@ -271,7 +358,7 @@ public class WifiInfoBarf extends AppCompatActivity{
         };
 
         t = new Timer();
-        t.scheduleAtFixedRate(timer, 0, 60000);
+        t.scheduleAtFixedRate(timer, 0, 30000);
     }
 
     @Override

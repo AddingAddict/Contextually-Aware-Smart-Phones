@@ -25,7 +25,7 @@ public class VibrateService extends Service {
     @Override
     public void onCreate() {
         audioManager = (AudioManager) this.getSystemService(Context.AUDIO_SERVICE);
-        audioManager.setRingerMode(AudioManager.RINGER_MODE_SILENT);
+        audioManager.setRingerMode(AudioManager.RINGER_MODE_VIBRATE);
         stopSelf();
     }
 
