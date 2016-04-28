@@ -25,7 +25,8 @@
         (in ms)</string>
     <string name="length_silence_hint">100</string>
 
-    <string name="yes_silent"><b>Within Silent Zone? </b> Yes</string>
-    <string name="no_silent"><b>WIthin Silent Zone? </b> No</string>
+    <string name="searching"><b>State:</b> searching</string>
+    <string name="waiting"><b>State:</b> waiting</string>
+    <string name="silencing"><b>State:</b> in a silent zone</string>
 
 </resources>

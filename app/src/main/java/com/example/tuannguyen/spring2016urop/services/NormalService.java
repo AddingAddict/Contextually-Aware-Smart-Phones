@@ -1,4 +1,4 @@
-package com.example.tuannguyen.spring2016urop;
+package com.example.tuannguyen.spring2016urop.services;
 
 import android.app.Service;
 import android.content.Context;

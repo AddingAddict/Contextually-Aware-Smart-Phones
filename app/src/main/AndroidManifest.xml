@@ -23,15 +23,15 @@
         </activity>
 
         <service
-            android:name=".SilenceService"
+            android:name=".services.SilenceService"
             android:exported="false"></service>
 
         <service
-            android:name=".VibrateService"
+            android:name=".services.VibrateService"
             android:exported="false"></service>
 
         <service
-            android:name=".NormalService"
+            android:name=".services.NormalService"
             android:exported="false"></service>
     </application>
 

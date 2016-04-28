@@ -23,52 +23,119 @@ import android.widget.EditText;
 import android.widget.Switch;
 import android.widget.TextView;
 
+import com.example.tuannguyen.spring2016urop.enums.ActionMode;
+import com.example.tuannguyen.spring2016urop.enums.RingerMode;
+import com.example.tuannguyen.spring2016urop.enums.State;
+import com.example.tuannguyen.spring2016urop.services.NormalService;
+import com.example.tuannguyen.spring2016urop.services.SilenceService;
+import com.example.tuannguyen.spring2016urop.services.VibrateService;
+
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
+/**
+ * @author Tuan Nguyen
+ */
 public class WifiInfoBarf extends AppCompatActivity{
 
     private static final int MY_PERMISSIONS_REQUEST_ACCESS_COARSE_LOCATION = 1;
+
+    /**
+     * SSID that signals a silent zone
+     */
     private static final String SILENCE_SSID = "MIT SECURE";
+
+    /**
+     * SSID that signals a non-silent zone
+     */
+    private static final String SOUND_SSID = "MIT GUEST";
+
+    /**
+     * Minimum signal strength to be considered
+     */
     private static final int threshold = -65;
 
-    public static final int SILENT = 0;
-    public static final int VIBRATE = 1;
+    /**
+     * Behaviour object in charge of changing the state of the app
+     */
+    Behaviour behaviour;
 
-    public static final int AUTO = 0;
-    public static final int MANUAL = 1;
+    /**
+     * Ringer mode (vibrate or silent) that the phone will switch to in AUTO mode
+     */
+    RingerMode ringerMode;
 
-    private static final int NOTIFICATION_ID = 001;
+    /**
+     * Mode of action. AUTO = change setting automatically, MANUAL = push a notification to change settings
+     */
+    ActionMode actionMode;
 
+    /**
+     * Manager in charge of dealing with wifi scans
+     */
     WifiManager wifiManager;
+
+    /**
+     * List of most recent scan results
+     */
     List<ScanResult> scanResults;
 
+    /**
+     * Manager in charge of changing audio settings
+     */
     AudioManager audioManager;
 
-    NotificationCompat.Builder nBuilderSilent;
-    NotificationCompat.Builder nBuilderNormal;
-    NotificationManager nManager;
-
+    /**
+     * Timer object runs every 10 seconds
+     */
     Timer t;
+
+    /**
+     * Dictates the action every time Timer t is called (based on app's state)
+     */
     TimerTask timer;
 
+    /**
+     * Object referring to this activity (necessary for creating TimerTask timer only)
+     */
     Activity wifiInfoBarf;
-    TextView expo;
-    TextView silent;
-    TextView scanList;
-    Switch autoManual;
-    Switch silenceVibrate;
-    TextView numBuzzText;
-    EditText numBuzzBox;
-    TextView lenBuzzText;
-    EditText lenBuzzBox;
-    TextView lenSilentText;
-    EditText lenSilentBox;
 
-    int ringerMode;
-    int actionMode;
-    boolean inSilentZone;
+    /**
+     * View object that clues what state the app is in (mostly for debugging purposes)
+     */
+    TextView currentState;
+
+    /**
+     * View object that lists all the wifi information that's important for the app (mostly for debugging purposes)
+     */
+    TextView scanList;
+
+    /**
+     * Switch that toggles between action modes
+     */
+    Switch autoManual;
+
+    /**
+     * Switch that toggles between ringer modes
+     */
+    Switch silenceVibrate;
+
+    /**
+     * View object that contains the number of notification buzzes
+     */
+    EditText numBuzzBox;
+
+    /**
+     * View object that contains the length of each notification buzz
+     */
+    EditText lenBuzzBox;
+
+    /**
+     * View object that contains the length between each notification buzz
+     */
+    EditText lenSilentBox;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -93,21 +160,14 @@ public class WifiInfoBarf extends AppCompatActivity{
         wifiInfoBarf = this;
 
         // Stores the various view objects in the activity to change later
-        expo = (TextView) this.findViewById(R.id.expo);
-
-        silent = (TextView) this.findViewById(R.id.silent);
+        currentState = (TextView) this.findViewById(R.id.silent);
 
         scanList = (TextView) this.findViewById(R.id.scan_list);
         scanList.setMovementMethod(new ScrollingMovementMethod());
 
-        numBuzzText = (TextView) this.findViewById(R.id.number_buzzes_text);
-        lenBuzzText = (TextView) this.findViewById(R.id.length_buzzes_text);
-        lenSilentText = (TextView) this.findViewById(R.id.length_silence_text);
-
         // Default modes for settings
-        ringerMode = SILENT;
-        actionMode = MANUAL;
-        inSilentZone = false;
+        ringerMode = RingerMode.SILENT;
+        actionMode = ActionMode.MANUAL;
 
         // Specifies behavior for auto/manual switch
         autoManual = (Switch) this.findViewById(R.id.auto_manual);
@@ -119,9 +179,9 @@ public class WifiInfoBarf extends AppCompatActivity{
                                          boolean isChecked) {
 
                 if(isChecked){
-                    actionMode = AUTO;
+                    actionMode = ActionMode.AUTO;
                 }else{
-                    actionMode = MANUAL;
+                    actionMode = ActionMode.MANUAL;
                 }
 
             }
@@ -137,9 +197,17 @@ public class WifiInfoBarf extends AppCompatActivity{
                                          boolean isChecked) {
 
                 if (isChecked) {
-                    ringerMode = SILENT;
+                    ringerMode = RingerMode.SILENT;
+                    if(actionMode.equals(ActionMode.AUTO) &&
+                            behaviour.state.equals(State.SILENCING)) {
+                        audioManager.setRingerMode(AudioManager.RINGER_MODE_SILENT);
+                    }
                 } else {
-                    ringerMode = VIBRATE;
+                    ringerMode = RingerMode.VIBRATE;
+                    if(actionMode.equals(ActionMode.AUTO) &&
+                            behaviour.state.equals(State.SILENCING)) {
+                        audioManager.setRingerMode(AudioManager.RINGER_MODE_VIBRATE);
+                    }
                 }
 
             }
@@ -171,7 +239,7 @@ public class WifiInfoBarf extends AppCompatActivity{
         PendingIntent pDoNothing = PendingIntent.getService(this, 0, doNothing, 0);
 
         // Creates necessary objects for creating notifications, associating pending intents
-        nBuilderSilent = new NotificationCompat.Builder(this)
+        NotificationCompat.Builder nBuilderSilent = new NotificationCompat.Builder(this)
                 .setSmallIcon(R.drawable.ic_stat_trollface)
                 .setContentTitle("Please Silence Me!")
                 .setContentText("You are entering a silent area.")
@@ -183,7 +251,7 @@ public class WifiInfoBarf extends AppCompatActivity{
                 .addAction(new NotificationCompat.Action.Builder(R.drawable.ic_volume_off_black_24dp,
                         "silent", pSetSilent).build());
 
-        nBuilderNormal = new NotificationCompat.Builder(this)
+        NotificationCompat.Builder nBuilderNormal = new NotificationCompat.Builder(this)
                 .setSmallIcon(R.drawable.ic_stat_trollface)
                 .setContentTitle("Turn on my Volume Again?")
                 .setContentText("You have exited the area.")
@@ -194,7 +262,9 @@ public class WifiInfoBarf extends AppCompatActivity{
                         "sound", pSetNormal).build());
 
         // Creates a notification manager to issue the notifications
-        nManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        NotificationManager nManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+
+        behaviour = new Behaviour(nBuilderSilent, nBuilderNormal, nManager, audioManager);
 
         // Creates a timer that scans WiFi and changes settings every N minutes
         timer = new TimerTask() {
@@ -203,154 +273,67 @@ public class WifiInfoBarf extends AppCompatActivity{
                 wifiInfoBarf.runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        // Performs a WiFi scan and saves the resulting list
-                        wifiManager.startScan();
-                        scanResults = wifiManager.getScanResults();
 
-                        nManager.cancel(NOTIFICATION_ID);
+                        // If the app is in the WAITING state, then it should not initiate a wifi scan
+                        if(behaviour.state == State.WAITING) {
+                            currentState.setText(R.string.waiting);
+                            behaviour.updateState(ringerMode, actionMode, numBuzzBox, lenBuzzBox, lenSilentBox);
 
-                        // If the scan is not empty, then print out the list
-                        if(scanResults == null){
-                            scanList.setText(R.string.null_scan);
-                        }else{
-                            String text = "";
-                            boolean shouldSilence = false;
-                            for(ScanResult scan : scanResults) {
-                                text += "[" + scan.level + " dBm] (" + scan.BSSID + ") " +
-                                        scan.SSID;
-                                if(scan.SSID.equals(SILENCE_SSID) && scan.level > threshold){
-                                    text += " <-- SHHHH!";
-                                    shouldSilence = true;
+                        // In any other state, it should initiate a wifi scan
+                        } else {
+                            if(behaviour.state == State.SEARCHING)
+                                currentState.setText(R.string.searching);
+                            else //behaviour.state == State.SILENCING
+                                currentState.setText(R.string.silencing);
+
+                            // Performs a WiFi scan and saves the resulting list
+                            wifiManager.startScan();
+                            scanResults = wifiManager.getScanResults();
+
+                            // If the scan is not empty, then print out the list
+                            if (scanResults == null) {
+                                scanList.setText(R.string.null_scan);
+                            } else {
+                                /// TODO: 4/26/16
+                                /* This is a bit of a mess. It reads through the scans, and if it is searching for a
+                                 * "silent SSID", it will pass the scans above the threshold to the behaviour object
+                                 * so that it can calculate if the user is moving or sitting still.
+                                 *
+                                 * If it is already silenced, then it will seek out "normal SSID's" to tell the app
+                                 * to exit silent mode
+                                 *
+                                 * Also prints a nice list for debugging purposes
+                                 */
+                                String text = "";
+                                int maxSoundSSIDLevel = -100;
+                                int maxSilentSSIDLevel = -100;
+                                List<ScanResult> silentScans = new ArrayList<ScanResult>();
+                                for (ScanResult scan : scanResults) {
+                                    text += "[" + scan.level + " dBm] (" + scan.BSSID + ") " +
+                                            scan.SSID;
+                                    if (scan.SSID.equals(SILENCE_SSID) &&
+                                            scan.level > threshold) {
+                                        text += " <-- Silencing SSID!";
+                                        if(scan.level > maxSilentSSIDLevel)
+                                            maxSilentSSIDLevel = scan.level;
+                                        if(behaviour.state == State.SEARCHING)
+                                            silentScans.add(scan);
+                                    } else if (scan.SSID.equals(SOUND_SSID) &&
+                                            scan.level > maxSoundSSIDLevel) {
+                                        text += " <-- Normal SSID";
+                                        maxSoundSSIDLevel = scan.level;
+                                    }
+                                    text += "\n";
                                 }
-                                text += "\n";
+                                if(behaviour.state == State.SEARCHING)
+                                    behaviour.addScan(silentScans);
+
+
+                                if (behaviour.state == State.SILENCING && maxSilentSSIDLevel < maxSoundSSIDLevel)
+                                    behaviour.updateState(ringerMode, actionMode, numBuzzBox, lenBuzzBox, lenSilentBox);
+
+                                scanList.setText(text);
                             }
-
-                            // If the "silence SSID" is found, then change the ringer mode
-                            if(shouldSilence){
-                                silent.setText(R.string.yes_silent);
-                                switch (actionMode) {
-                                    // If the app is allowed to automatically change the setting
-                                    case AUTO:
-                                        switch (ringerMode) {
-                                            case SILENT:
-                                                audioManager.setRingerMode(
-                                                        AudioManager.RINGER_MODE_SILENT);
-                                                break;
-
-                                            case VIBRATE:
-                                                audioManager.setRingerMode(
-                                                        AudioManager.RINGER_MODE_VIBRATE);
-                                                break;
-
-                                            default:
-                                                throw new IllegalStateException();
-                                        }
-                                        break;
-
-                                    // If the app needs to send a notification out instead
-                                    case MANUAL:
-                                        if(!inSilentZone) {
-                                            inSilentZone = true;
-
-                                            int numBuzz;
-                                            if(numBuzzBox.getText().toString().equals("")){
-                                                numBuzz = 1;
-                                            } else {
-                                                numBuzz = Integer.parseInt(
-                                                        numBuzzBox.getText().toString());
-                                            }
-
-                                            int lenBuzz;
-                                            if(numBuzzBox.getText().toString().equals("")){
-                                                lenBuzz = 100;
-                                            } else {
-                                                lenBuzz = Integer.parseInt(
-                                                        lenBuzzBox.getText().toString());
-                                            }
-
-                                            int lenSilent;
-                                            if(numBuzzBox.getText().toString().equals("")){
-                                                lenSilent = 100;
-                                            } else {
-                                                lenSilent = Integer.parseInt(
-                                                        lenSilentBox.getText().toString());
-                                            }
-
-                                            long[] buzzPattern = new long[2*numBuzz + 1];
-
-                                            buzzPattern[0] = lenSilent;
-                                            for(int i = 0; i < numBuzz; i++){
-                                                buzzPattern[2*i + 1] = lenBuzz;
-                                                buzzPattern[2*i + 2] = lenSilent;
-                                            }
-
-                                            nBuilderSilent.setVibrate(buzzPattern);
-                                            nManager.notify(NOTIFICATION_ID,
-                                                    nBuilderSilent.build());
-                                        }
-                                        break;
-
-                                    default:
-                                        throw new IllegalStateException();
-                                }
-                            }else{
-                                silent.setText(R.string.no_silent);
-                                switch (actionMode){
-                                    case AUTO:
-                                        audioManager.setRingerMode(AudioManager.RINGER_MODE_NORMAL);
-                                        break;
-
-                                    case MANUAL:
-                                        if(inSilentZone) {
-                                            inSilentZone = false;
-
-
-                                            int numBuzz;
-                                            if(numBuzzBox.getText().toString().equals("")){
-                                                numBuzz = 1;
-                                            } else {
-                                                numBuzz = Integer.parseInt(
-                                                        numBuzzBox.getText().toString());
-                                            }
-
-                                            int lenBuzz;
-                                            if(numBuzzBox.getText().toString().equals("")){
-                                                lenBuzz = 100;
-                                            } else {
-                                                lenBuzz = Integer.parseInt(
-                                                        lenBuzzBox.getText().toString());
-                                            }
-
-                                            int lenSilent;
-                                            if(numBuzzBox.getText().toString().equals("")){
-                                                lenSilent = 100;
-                                            } else {
-                                                lenSilent = Integer.parseInt(
-                                                        lenSilentBox.getText().toString());
-                                            }
-
-                                            long[] buzzPattern = new long[2*numBuzz + 1];
-
-                                            buzzPattern[0] = lenSilent;
-                                            for(int i = 0; i < numBuzz; i++){
-                                                buzzPattern[2*i + 1] = lenBuzz;
-                                                buzzPattern[2*i + 2] = lenSilent;
-                                            }
-
-                                            nBuilderNormal.setVibrate(buzzPattern);
-                                            if(audioManager.getRingerMode()
-                                                    != AudioManager.RINGER_MODE_NORMAL) {
-                                                nManager.notify(NOTIFICATION_ID,
-                                                        nBuilderNormal.build());
-                                            }
-                                        }
-                                        break;
-
-                                    default:
-                                        break;
-                                }
-                            }
-                            scanList.setText(text);
                         }
                     }
                 });
@@ -358,7 +341,7 @@ public class WifiInfoBarf extends AppCompatActivity{
         };
 
         t = new Timer();
-        t.scheduleAtFixedRate(timer, 0, 30000);
+        t.scheduleAtFixedRate(timer, 0, 10000);
     }
 
     @Override
