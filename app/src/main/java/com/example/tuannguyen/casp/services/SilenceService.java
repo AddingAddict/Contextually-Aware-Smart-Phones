@@ -1,4 +1,4 @@
-package com.example.tuannguyen.spring2016urop.services;
+package com.example.tuannguyen.casp.services;
 
 import android.app.Service;
 import android.content.Context;
@@ -8,15 +8,15 @@ import android.os.Binder;
 import android.os.IBinder;
 
 /**
- * Created by tuannguyen on 3/7/16.
+ * Created by tuannguyen on 3/3/16.
  */
-public class VibrateService extends Service {
+public class SilenceService extends Service {
 
     AudioManager audioManager;
 
     public class LocalBinder extends Binder {
-        VibrateService getService() {
-            return VibrateService.this;
+        SilenceService getService() {
+            return SilenceService.this;
         }
     }
 
@@ -25,7 +25,7 @@ public class VibrateService extends Service {
     @Override
     public void onCreate() {
         audioManager = (AudioManager) this.getSystemService(Context.AUDIO_SERVICE);
-        audioManager.setRingerMode(AudioManager.RINGER_MODE_VIBRATE);
+        audioManager.setRingerMode(AudioManager.RINGER_MODE_SILENT);
         stopSelf();
     }
 

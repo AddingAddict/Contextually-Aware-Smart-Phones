@@ -14,14 +14,14 @@
         android:textSize="24sp"/>
 
     <Switch
-        android:id="@+id/auto_manual"
+        android:id="@+id/auto_notify"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginBottom="16dp"
         android:showText="true"
-        android:text="@string/auto_manual"
+        android:text="@string/action_mode"
         android:textOn="@string/auto"
-        android:textOff="@string/manual"
+        android:textOff="@string/notify"
         android:thumb="@drawable/holotheme_switch_inner_holo_light"
         android:track="@drawable/holotheme_switch_track_holo_light"/>
 
@@ -30,7 +30,7 @@
         android:layout_height="wrap_content"
         android:layout_marginBottom="16dp"
         android:showText="true"
-        android:text="@string/silence_vibrate"
+        android:text="@string/ringer_mode"
         android:textOn="@string/silence"
         android:textOff="@string/vibrate"
         android:thumb="@drawable/holotheme_switch_inner_holo_light"

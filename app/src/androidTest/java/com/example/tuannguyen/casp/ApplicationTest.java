@@ -1,4 +1,4 @@
-package com.example.tuannguyen.spring2016urop;
+package com.example.tuannguyen.casp;
 
 import android.app.Application;
 import android.test.ApplicationTestCase;

@@ -1,4 +1,4 @@
-package com.example.tuannguyen.spring2016urop;
+package com.example.tuannguyen.casp.util;
 
 /**
  * Created by tuannguyen on 4/26/16.
@@ -7,11 +7,6 @@ import android.app.NotificationManager;
 import android.media.AudioManager;
 import android.net.wifi.ScanResult;
 import android.support.v4.app.NotificationCompat;
-import android.widget.EditText;
-
-import com.example.tuannguyen.spring2016urop.enums.ActionMode;
-import com.example.tuannguyen.spring2016urop.enums.RingerMode;
-import com.example.tuannguyen.spring2016urop.enums.State;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -23,6 +18,17 @@ import java.util.List;
  * Handles the app's state transitions and behaviour
  */
 public class Behaviour {
+    /**
+     * The various states the app can be in
+     * <p>
+     *     SEARCHING = the app is looking for a positive wifi source that has a near constant power reading over the time span of one minute
+     *     WAITING = the app is resting, and is not scanning for wifi sources
+     *     SILENCING = the app is currently in a silent zone, and is waiting to exit the silent zone
+     * </p>
+     */
+    public enum State {
+        SEARCHING, WAITING, SILENCING
+    }
 
     private static final int NOTIFICATION_ID = 001;
 
@@ -57,6 +63,11 @@ public class Behaviour {
     NotificationManager nManager;
 
     /**
+     * Object that reads the vibration patter the user selects
+     */
+    VibrationNotification vNotifier;
+
+    /**
      * Manages changing audio settings
      */
     AudioManager audioManager;
@@ -65,7 +76,7 @@ public class Behaviour {
      * Constructor for Behaviour class
      */
     public Behaviour(NotificationCompat.Builder silent, NotificationCompat.Builder normal,
-                     NotificationManager nm, AudioManager am) {
+                     NotificationManager nm, VibrationNotification vn, AudioManager am) {
         this.state = State.SEARCHING;
         this.counter = 0;
         recentScans = new HashMap<String, List<Integer>>();
@@ -73,7 +84,16 @@ public class Behaviour {
         nBuilderSilent = silent;
         nBuilderNormal = normal;
         nManager = nm;
+        vNotifier = vn;
         audioManager = am;
+    }
+
+    /**
+     * Returns the app's current state
+     * @return State enum
+     */
+    public State getState() {
+        return state;
     }
 
     /**
@@ -114,12 +134,8 @@ public class Behaviour {
      * </p>
      * @param rm The app's current ringer mode
      * @param am The app's current ringer mode
-     * @param numBuzzBox View object with the number of notification buzzes
-     * @param lenBuzzBox View object with the length of each notification buzz
-     * @param lenSilentBox View object with the length between each notification buzz
      */
-    public void updateState(RingerMode rm, ActionMode am, EditText numBuzzBox, EditText lenBuzzBox,
-                            EditText lenSilentBox) {
+    public void updateState(RingerMode rm, ActionMode am) {
         switch (this.state) {
             case SEARCHING:
                 this.counter++;
@@ -143,11 +159,11 @@ public class Behaviour {
                     recentScans.clear();
                     if(setSilent) {
                         setState(State.SILENCING);
-                        switch (am) {
+                        switch (am.getMode()) {
                             // If the app is allowed to automatically change the setting
                             case AUTO:
-                                switch (rm) {
-                                    case SILENT:
+                                switch (rm.getMode()) {
+                                    case SILENCE:
                                         audioManager.setRingerMode(
                                                 AudioManager.RINGER_MODE_SILENT);
                                         break;
@@ -163,40 +179,8 @@ public class Behaviour {
                                 break;
 
                             // If the app needs to send a notification out instead
-                            case MANUAL:
-                                int numBuzz;
-                                if (numBuzzBox.getText().toString().equals("")) {
-                                    numBuzz = 1;
-                                } else {
-                                    numBuzz = Integer.parseInt(
-                                            numBuzzBox.getText().toString());
-                                }
-
-                                int lenBuzz;
-                                if (numBuzzBox.getText().toString().equals("")) {
-                                    lenBuzz = 100;
-                                } else {
-                                    lenBuzz = Integer.parseInt(
-                                            lenBuzzBox.getText().toString());
-                                }
-
-                                int lenSilent;
-                                if (numBuzzBox.getText().toString().equals("")) {
-                                    lenSilent = 100;
-                                } else {
-                                    lenSilent = Integer.parseInt(
-                                            lenSilentBox.getText().toString());
-                                }
-
-                                long[] buzzPattern = new long[2 * numBuzz + 1];
-
-                                buzzPattern[0] = lenSilent;
-                                for (int i = 0; i < numBuzz; i++) {
-                                    buzzPattern[2 * i + 1] = lenBuzz;
-                                    buzzPattern[2 * i + 2] = lenSilent;
-                                }
-
-                                nBuilderSilent.setVibrate(buzzPattern);
+                            case NOTIFY:
+                                vNotifier.setVibrationPattern(nBuilderSilent);
                                 nManager.notify(NOTIFICATION_ID,
                                         nBuilderSilent.build());
                                 break;
@@ -212,46 +196,14 @@ public class Behaviour {
 
             case SILENCING:
                 setState(State.WAITING);
-                switch (am) {
+                switch (am.getMode()) {
                     case AUTO:
                         audioManager.setRingerMode(
                                 AudioManager.RINGER_MODE_NORMAL);
                         break;
 
-                    case MANUAL:
-                        int numBuzz;
-                        if (numBuzzBox.getText().toString().equals("")) {
-                            numBuzz = 1;
-                        } else {
-                            numBuzz = Integer.parseInt(
-                                    numBuzzBox.getText().toString());
-                        }
-
-                        int lenBuzz;
-                        if (numBuzzBox.getText().toString().equals("")) {
-                            lenBuzz = 100;
-                        } else {
-                            lenBuzz = Integer.parseInt(
-                                    lenBuzzBox.getText().toString());
-                        }
-
-                        int lenSilent;
-                        if (numBuzzBox.getText().toString().equals("")) {
-                            lenSilent = 100;
-                        } else {
-                            lenSilent = Integer.parseInt(
-                                    lenSilentBox.getText().toString());
-                        }
-
-                        long[] buzzPattern = new long[2 * numBuzz + 1];
-
-                        buzzPattern[0] = lenSilent;
-                        for (int i = 0; i < numBuzz; i++) {
-                            buzzPattern[2 * i + 1] = lenBuzz;
-                            buzzPattern[2 * i + 2] = lenSilent;
-                        }
-
-                        nBuilderNormal.setVibrate(buzzPattern);
+                    case NOTIFY:
+                        vNotifier.setVibrationPattern(nBuilderNormal);
                         if (audioManager.getRingerMode()
                                 != AudioManager.RINGER_MODE_NORMAL) {
                             nManager.notify(NOTIFICATION_ID,

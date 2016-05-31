@@ -1,4 +1,4 @@
-package com.example.tuannguyen.spring2016urop.services;
+package com.example.tuannguyen.casp.services;
 
 import android.app.Service;
 import android.content.Context;
@@ -10,13 +10,13 @@ import android.os.IBinder;
 /**
  * Created by tuannguyen on 3/7/16.
  */
-public class NormalService extends Service{
+public class VibrateService extends Service {
 
     AudioManager audioManager;
 
     public class LocalBinder extends Binder {
-        NormalService getService() {
-            return NormalService.this;
+        VibrateService getService() {
+            return VibrateService.this;
         }
     }
 
@@ -25,7 +25,7 @@ public class NormalService extends Service{
     @Override
     public void onCreate() {
         audioManager = (AudioManager) this.getSystemService(Context.AUDIO_SERVICE);
-        audioManager.setRingerMode(AudioManager.RINGER_MODE_NORMAL);
+        audioManager.setRingerMode(AudioManager.RINGER_MODE_VIBRATE);
         stopSelf();
     }
 

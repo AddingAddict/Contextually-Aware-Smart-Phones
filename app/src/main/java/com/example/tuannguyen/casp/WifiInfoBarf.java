@@ -1,4 +1,4 @@
-package com.example.tuannguyen.spring2016urop;
+package com.example.tuannguyen.casp;
 
 import android.Manifest;
 import android.app.Activity;
@@ -18,17 +18,17 @@ import android.os.Bundle;
 import android.text.method.ScrollingMovementMethod;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.Switch;
 import android.widget.TextView;
 
-import com.example.tuannguyen.spring2016urop.enums.ActionMode;
-import com.example.tuannguyen.spring2016urop.enums.RingerMode;
-import com.example.tuannguyen.spring2016urop.enums.State;
-import com.example.tuannguyen.spring2016urop.services.NormalService;
-import com.example.tuannguyen.spring2016urop.services.SilenceService;
-import com.example.tuannguyen.spring2016urop.services.VibrateService;
+import com.example.tuannguyen.casp.util.ActionMode;
+import com.example.tuannguyen.casp.util.Behaviour;
+import com.example.tuannguyen.casp.util.RingerMode;
+import com.example.tuannguyen.casp.services.NormalService;
+import com.example.tuannguyen.casp.services.SilenceService;
+import com.example.tuannguyen.casp.services.VibrateService;
+import com.example.tuannguyen.casp.util.VibrationNotification;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -73,7 +73,7 @@ public class WifiInfoBarf extends AppCompatActivity{
     ActionMode actionMode;
 
     /**
-     * Manager in charge of dealing with wifi scans
+     * Manager in charge of dealing with wifi scansq
      */
     WifiManager wifiManager;
 
@@ -81,11 +81,6 @@ public class WifiInfoBarf extends AppCompatActivity{
      * List of most recent scan results
      */
     List<ScanResult> scanResults;
-
-    /**
-     * Manager in charge of changing audio settings
-     */
-    AudioManager audioManager;
 
     /**
      * Timer object runs every 10 seconds
@@ -112,31 +107,6 @@ public class WifiInfoBarf extends AppCompatActivity{
      */
     TextView scanList;
 
-    /**
-     * Switch that toggles between action modes
-     */
-    Switch autoManual;
-
-    /**
-     * Switch that toggles between ringer modes
-     */
-    Switch silenceVibrate;
-
-    /**
-     * View object that contains the number of notification buzzes
-     */
-    EditText numBuzzBox;
-
-    /**
-     * View object that contains the length of each notification buzz
-     */
-    EditText lenBuzzBox;
-
-    /**
-     * View object that contains the length between each notification buzz
-     */
-    EditText lenSilentBox;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -160,70 +130,17 @@ public class WifiInfoBarf extends AppCompatActivity{
         wifiInfoBarf = this;
 
         // Stores the various view objects in the activity to change later
-        currentState = (TextView) this.findViewById(R.id.silent);
+        currentState = (TextView) this.findViewById(R.id.state);
 
         scanList = (TextView) this.findViewById(R.id.scan_list);
         scanList.setMovementMethod(new ScrollingMovementMethod());
 
-        // Default modes for settings
-        ringerMode = RingerMode.SILENT;
-        actionMode = ActionMode.MANUAL;
+        // Initializes setting modes
+        ringerMode = new RingerMode((Switch) this.findViewById(R.id.silence_vibrate), RingerMode.RM.SILENCE);
+        actionMode = new ActionMode((Switch) this.findViewById(R.id.auto_notify), ActionMode.AM.NOTIFY);
 
-        // Specifies behavior for auto/manual switch
-        autoManual = (Switch) this.findViewById(R.id.auto_manual);
-        autoManual.setChecked(false);
-        autoManual.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView,
-                                         boolean isChecked) {
-
-                if(isChecked){
-                    actionMode = ActionMode.AUTO;
-                }else{
-                    actionMode = ActionMode.MANUAL;
-                }
-
-            }
-        });
-
-        // Specifies behavior for silence/vibrate switch
-        silenceVibrate = (Switch) this.findViewById(R.id.silence_vibrate);
-        silenceVibrate.setChecked(true);
-        silenceVibrate.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView,
-                                         boolean isChecked) {
-
-                if (isChecked) {
-                    ringerMode = RingerMode.SILENT;
-                    if(actionMode.equals(ActionMode.AUTO) &&
-                            behaviour.state.equals(State.SILENCING)) {
-                        audioManager.setRingerMode(AudioManager.RINGER_MODE_SILENT);
-                    }
-                } else {
-                    ringerMode = RingerMode.VIBRATE;
-                    if(actionMode.equals(ActionMode.AUTO) &&
-                            behaviour.state.equals(State.SILENCING)) {
-                        audioManager.setRingerMode(AudioManager.RINGER_MODE_VIBRATE);
-                    }
-                }
-
-            }
-        });
-
-        // Stores textbox objects so we can use them as input
-        numBuzzBox = (EditText) this.findViewById(R.id.number_buzzes_box);
-        numBuzzBox.setText("1");
-        lenBuzzBox = (EditText) this.findViewById(R.id.length_buzzes_box);
-        lenBuzzBox.setText("100");
-        lenSilentBox = (EditText) this.findViewById(R.id.length_silence_box);
-        lenSilentBox.setText("100");
-
-        // Creates the managers for WiFi and Audio settings
+        // Creates the WiFi Manager
         wifiManager = (WifiManager) this.getSystemService(Context.WIFI_SERVICE);
-        audioManager = (AudioManager) this.getSystemService(Context.AUDIO_SERVICE);
 
         // Creates the intents that silences the phone when the notification is clicked
         Intent setSilent = new Intent(this, SilenceService.class);
@@ -264,7 +181,12 @@ public class WifiInfoBarf extends AppCompatActivity{
         // Creates a notification manager to issue the notifications
         NotificationManager nManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
 
-        behaviour = new Behaviour(nBuilderSilent, nBuilderNormal, nManager, audioManager);
+        AudioManager am = (AudioManager) this.getSystemService(Context.AUDIO_SERVICE);
+        VibrationNotification vn = new VibrationNotification((EditText) this.findViewById(R.id.number_buzzes_box),
+                (EditText) this.findViewById(R.id.length_buzzes_box), (EditText) this.findViewById(R.id.length_silence_box),
+                1, 100, 100);
+
+        behaviour = new Behaviour(nBuilderSilent, nBuilderNormal, nManager, vn, am);
 
         // Creates a timer that scans WiFi and changes settings every N minutes
         timer = new TimerTask() {
@@ -275,13 +197,13 @@ public class WifiInfoBarf extends AppCompatActivity{
                     public void run() {
 
                         // If the app is in the WAITING state, then it should not initiate a wifi scan
-                        if(behaviour.state == State.WAITING) {
+                        if(behaviour.getState() == Behaviour.State.WAITING) {
                             currentState.setText(R.string.waiting);
-                            behaviour.updateState(ringerMode, actionMode, numBuzzBox, lenBuzzBox, lenSilentBox);
+                            behaviour.updateState(ringerMode, actionMode);
 
                         // In any other state, it should initiate a wifi scan
                         } else {
-                            if(behaviour.state == State.SEARCHING)
+                            if(behaviour.getState() == Behaviour.State.SEARCHING)
                                 currentState.setText(R.string.searching);
                             else //behaviour.state == State.SILENCING
                                 currentState.setText(R.string.silencing);
@@ -316,7 +238,7 @@ public class WifiInfoBarf extends AppCompatActivity{
                                         text += " <-- Silencing SSID!";
                                         if(scan.level > maxSilentSSIDLevel)
                                             maxSilentSSIDLevel = scan.level;
-                                        if(behaviour.state == State.SEARCHING)
+                                        if(behaviour.getState() == Behaviour.State.SEARCHING)
                                             silentScans.add(scan);
                                     } else if (scan.SSID.equals(SOUND_SSID) &&
                                             scan.level > maxSoundSSIDLevel) {
@@ -325,12 +247,12 @@ public class WifiInfoBarf extends AppCompatActivity{
                                     }
                                     text += "\n";
                                 }
-                                if(behaviour.state == State.SEARCHING)
+                                if(behaviour.getState() == Behaviour.State.SEARCHING)
                                     behaviour.addScan(silentScans);
 
 
-                                if (behaviour.state == State.SILENCING && maxSilentSSIDLevel < maxSoundSSIDLevel)
-                                    behaviour.updateState(ringerMode, actionMode, numBuzzBox, lenBuzzBox, lenSilentBox);
+                                if (behaviour.getState() == Behaviour.State.SILENCING && maxSilentSSIDLevel < maxSoundSSIDLevel)
+                                    behaviour.updateState(ringerMode, actionMode);
 
                                 scanList.setText(text);
                             }

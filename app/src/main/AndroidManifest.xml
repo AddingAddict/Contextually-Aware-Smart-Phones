@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.tuannguyen.spring2016urop">
+    package="com.example.tuannguyen.casp">
 
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
@@ -13,7 +13,7 @@
         android:label="@string/app_name"
         android:theme="@style/AppTheme">
         <activity
-            android:name=".WifiInfoBarf"
+            android:name="com.example.tuannguyen.casp.WifiInfoBarf"
             android:label="@string/app_name">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -23,15 +23,15 @@
         </activity>
 
         <service
-            android:name=".services.SilenceService"
+            android:name="com.example.tuannguyen.casp.services.SilenceService"
             android:exported="false"></service>
 
         <service
-            android:name=".services.VibrateService"
+            android:name="com.example.tuannguyen.casp.services.VibrateService"
             android:exported="false"></service>
 
         <service
-            android:name=".services.NormalService"
+            android:name="com.example.tuannguyen.casp.services.NormalService"
             android:exported="false"></service>
     </application>
 
